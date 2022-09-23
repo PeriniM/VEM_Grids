@@ -1,5 +1,5 @@
 %versione che crea una griglia di esagoni, numerando i nodi in senso
-%antiorario, e sposta i vertici in modo random, senza eliminazione di
+%antiorario, e sposta i vertici in modo random, con eliminazione di
 %triangoli sui bordi
 
 clear
@@ -12,25 +12,88 @@ ymin=y0; ymax=y0+f2;
 
 n=6;
 alpha = 2*pi/n; 
-suddx = 3;
+suddx = 4;
 r_lato = f1/(2*suddx-1); %calcolato in modo che si parta con un vertice
 % e si finisce con un lato -> r_lato=(f1+r_lato)/(2*suddx)
 r_vertice = r_lato/cos(alpha/2);
-suddy = ceil(f2/((3*r_vertice)/2))+1; %per riempire tutto il dominio
+suddy = ceil(f2/((3*r_vertice)/2)); %per riempire tutto il dominio
 
 d=0.1; % fattore moltiplicativo per i vertici random
 
-x=xmin+r_lato;
-y=ymax+r_vertice+r_vertice/2;
+x=xmin;
+y=ymax;
 indelem=0;
 elem_x=cell(suddx*suddy,1);
 elem_y=cell(suddx*suddy,1);
 elem=cell(suddx*suddy,1);
 
+elimina_riga=0;
+
 for i=1:suddy
     for j=1:suddx
       indelem=indelem+1;
       [xprov, yprov] = creaesagono_v1(x,y,n,suddx,f1,xmin,xmax,ymin,ymax);
+      if i==1
+        if length(yprov)==4
+          yprov(end)= ymax; 
+        elseif length(yprov)==6
+          yprov(2)= ymax;
+          yprov(end)= ymax;
+          xprov(1)=[];
+          yprov(1)=[];
+        end
+      end
+      if i==suddy
+        if length(yprov)==3 || abs(yprov(1)-ymin)<(r_vertice*0.7)
+            elimina_riga=1;
+            switch length(elem_x{indelem-suddx,:})
+                case 4
+                    if elem_x{indelem-suddx,:}(1,1)<(xmin+xmax)/2
+                        elem_y{indelem-suddx,:}(1,2)=ymin;
+                        elem_y{indelem-suddx,:}(1,3)=ymin;
+                    else
+                        elem_y{indelem-suddx,:}(1,3)=ymin;
+                        elem_y{indelem-suddx,:}(1,4)=ymin;
+                    end
+                case 5
+                    if elem_x{indelem-suddx,:}(1,1)<(xmin+xmax)/2
+                        temp_x = elem_x{indelem-suddx,:}(1,:);
+                        temp_y = elem_y{indelem-suddx,:}(1,:);
+                        temp_x(3)=[];
+                        temp_y(3)=[];
+                        temp_y(end-1)=ymin;
+                        elem_x{indelem-suddx,:}=temp_x;
+                        elem_y{indelem-suddx,:}=temp_y;
+                    else
+                        temp_x = elem_x{indelem-suddx,:}(1,:);
+                        temp_y = elem_y{indelem-suddx,:}(1,:);
+                        temp_x(4)=[];
+                        temp_y(4)=[];
+                        temp_y(3)=ymin;    
+                        elem_x{indelem-suddx,:}=temp_x;
+                        elem_y{indelem-suddx,:}=temp_y;
+                    end   
+                case 6
+                    temp_x = elem_x{indelem-suddx,:}(1,:);
+                    temp_y = elem_y{indelem-suddx,:}(1,:);
+                    temp_y(3)=ymin;
+                    temp_y(5)=ymin;
+                    temp_x(4)=[];
+                    temp_y(4)=[];        
+                    elem_x{indelem-suddx,:}=temp_x;
+                    elem_y{indelem-suddx,:}=temp_y;
+                case 7
+                    temp_x = elem_x{indelem-suddx,:}(1,:);
+                    temp_y = elem_y{indelem-suddx,:}(1,:);
+                    temp_y(3)=ymin;
+                    temp_y(6)=ymin;
+                    temp_x(4:5)=[];
+                    temp_y(4:5)=[];     
+                    elem_x{indelem-suddx,:}=temp_x;
+                    elem_y{indelem-suddx,:}=temp_y;
+            end
+        end
+      end
       elem_x{indelem,:}=xprov;
       elem_y{indelem,:}=yprov;
       if indelem==1
@@ -43,11 +106,17 @@ for i=1:suddy
       x=x+2*r_lato;
     end
     if rem(i,2)==0
-        x=xmin+r_lato;
-    else       
         x=xmin;
+    else       
+        x=xmin+r_lato;
     end
     y=y-(r_vertice+r_vertice/2);
+end
+
+if elimina_riga==1
+    elem_x=elem_x(1:indelem-suddx);
+    elem_y=elem_y(1:indelem-suddx);
+    indelem=indelem-suddx;
 end
 
 linee_x=uniquetol(nodi_x); %usa quicksort + ordine crescente
@@ -98,7 +167,7 @@ yvert(1)=[];
 xvert_rand=xvert;
 yvert_rand=yvert;
 
-for ss=1:50
+for ss=1:30
 % costruzioni nodi di frontiera
 nnode=length(xvert);
 j=0;
@@ -133,7 +202,7 @@ for i=1:j
    plot(xvert(b(i)),yvert(b(i)),'m*')
 end
 griglia.elements=indelem;
-griglia.vertices=[xvert_rand yvert_rand];
+griglia.vertices=[xvert_rand; yvert_rand];
 griglia.bordo=b(:);
 axis equal
 pause(0.01);

@@ -1,7 +1,9 @@
-%versione che modifica il pentagono eliminando i nodi fuori dal dominio
+%versione che crea esagono valutando solo il nodo successivo
+%senza eliminazione di triangoli
 function [xprov, yprov] = createHexagon(x1,y1,n,suddx,f1,xmin,xmax,ymin,ymax)
-%{
+
 %---------righe da rimettere se si toglie la function---------
+%{
 x0=0; y0=0;
 f1=5; f2=5;  
 xmin=x0; xmax=x0+f1;  
@@ -14,11 +16,13 @@ r_lato = f1/(2*suddx-1); %calcolato in modo che si parta con un vertice
 % e si finisce con un lato -> r_lato=(f1+r_lato)/(2*suddx)
 r_vertice = r_lato/cos(alpha/2);
 %suddy = ceil(f2/((3*r_vertice)/2)); %per riempire tutto il dominio
+
 x=zeros(1,n);
 y=zeros(1,n);
 
 x(1)=x1; 
-y(1)=y1; 
+y(1)=y1;
+
 if abs(y(1)-ymin)<1e-10
       y(1)=ymin;
 end  
@@ -69,294 +73,226 @@ for i=2:n
    end
 end
 
-ind_pos = find(nodo_check==1); % mi da l'indice dei vertici dentro al dominio
-                               % se tutti i vertici sono dentro al dominio
-                               % allora si avrà il poligono
-
 xprov=zeros(1,1); % allocamento "brutale"
 yprov=zeros(1,1);
 controllo=0; %se ho controllato già la x non controllo anche la y per la
              %costruzione della retta
+xvert_aux=Inf;
+yvert_aux=Inf;
 
-             
 if ind~=n %se i nodi non sono tutti dentro
-    for j=1:ind %scansiono ciascun nodo interno al dominio
-        if ind_pos(j)==1
-            indice_nodo_precedente=n;
-            indice_nodo_successivo=2;
-        elseif ind_pos(j)==n
-            indice_nodo_successivo=1;
-            indice_nodo_precedente=n-1;
+    for j=1:n %scansiono ciascun nodo
+        %inizio la scansione dall'ultimo vertice e vado avanti
+        if j==1
+           indice_nodo_attuale=n;
+           indice_nodo_successivo=1;
+        elseif j==2
+           indice_nodo_attuale=1;
+           indice_nodo_successivo=2;
         else
-            indice_nodo_precedente=ind_pos(j)-1;
-            indice_nodo_successivo=ind_pos(j)+1;
+           indice_nodo_attuale=indice_nodo_attuale+1;
+           indice_nodo_successivo=indice_nodo_attuale+1;
         end
         
-        if nodo_check(indice_nodo_precedente)==0 %se il nodo precedente è fuori
+        if nodo_check(indice_nodo_attuale)==0 && nodo_check(indice_nodo_successivo)==0
+            % non faccio nulla
+        elseif nodo_check(indice_nodo_attuale)==0 && nodo_check(indice_nodo_successivo)==1
             % verifico in che parte del dominio è fuori
-            if x(indice_nodo_precedente)<xmin
-                xprov(end+1)=xmin;
-                yprov(end+1)=y(ind_pos(j))+(y(indice_nodo_precedente)-y(ind_pos(j)))...
-                    *(xmin-x(ind_pos(j)))/(x(indice_nodo_precedente)-x(ind_pos(j)));
+            if x(indice_nodo_attuale)<xmin
+                x_retta=xmin;
+                y_retta=y(indice_nodo_attuale)+(y(indice_nodo_successivo)-y(indice_nodo_attuale))...
+                    *(xmin-x(indice_nodo_attuale))/(x(indice_nodo_successivo)-x(indice_nodo_attuale));
                 %verifico se il punto della retta interseca il dominio
-                if yprov(end)>=ymin && yprov(end)<=ymax        
-                      % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                      % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                      % nodo nuovo e poi quello successivo valido
-                      if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                         xprov(end+1)=x(ind_pos(j));
-                         yprov(end+1)=y(ind_pos(j));
-                         if ind==1
-                            xprov1=[x(ind_pos(j)) xprov(end-1)];
-                            yprov1=[y(ind_pos(j)) yprov(end-1)];
-                         end
+                if y_retta>=ymin && y_retta<=ymax
+                      if x_retta~=x(indice_nodo_successivo) || y_retta~=y(indice_nodo_successivo)
+                         if indice_nodo_attuale==n
+                           xprov(end+1)=x(indice_nodo_successivo);
+                           yprov(end+1)=y(indice_nodo_successivo);
+                           xvert_aux=x_retta;
+                           yvert_aux=y_retta;
+                         else
+                           xprov=[xprov(1:end) x_retta x(indice_nodo_successivo)];
+                           yprov=[yprov(1:end) y_retta y(indice_nodo_successivo)];
+                         end 
                       else
-                          if ind==1
-                            xprov1=[x(ind_pos(j))];
-                            yprov1=[y(ind_pos(j))];
-                         end
-                      end    
-                    controllo=1;
-                else
-                     xprov(end)=[];
-                     yprov(end)=[];
-                     controllo=0;
-                end      
-            elseif x(indice_nodo_precedente)>xmax
-                xprov(end+1)=xmax;
-                yprov(end+1)=y(ind_pos(j))+(y(indice_nodo_precedente)-y(ind_pos(j)))...
-                    *(xmax-x(ind_pos(j)))/(x(indice_nodo_precedente)-x(ind_pos(j)));
-                %verifico se il punto della retta interseca il dominio
-                if yprov(end)>=ymin && yprov(end)<=ymax
-                    % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                      % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                      % nodo nuovo e poi quello successivo valido
-                      if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                         xprov(end+1)=x(ind_pos(j));
-                         yprov(end+1)=y(ind_pos(j));
-                         if ind==1
-                            xprov1=[x(ind_pos(j)) xprov(end-1)];
-                            yprov1=[y(ind_pos(j)) yprov(end-1)];
-                         end
-                      else
-                          if ind==1
-                            xprov1=[x(ind_pos(j))];
-                            yprov1=[y(ind_pos(j))];
-                         end
-                      end  
-                    controllo=1;
-                else
-                     xprov(end)=[];
-                     yprov(end)=[];
-                     controllo=0;
-                end
-            end
-            if y(indice_nodo_precedente)<ymin && controllo == 0
-                xprov(end+1)=x(ind_pos(j))+(x(indice_nodo_precedente)-x(ind_pos(j)))...
-                    *(ymin-y(ind_pos(j)))/(y(indice_nodo_precedente)-y(ind_pos(j)));
-                yprov(end+1)=ymin;
-                
-                  % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                  % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                  % nodo nuovo e poi quello successivo valido
-                  if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                     xprov(end+1)=x(ind_pos(j));
-                     yprov(end+1)=y(ind_pos(j));
-                     if ind==1
-                            xprov1=[x(ind_pos(j)) xprov(end-1)];
-                            yprov1=[y(ind_pos(j)) yprov(end-1)];
-                     end
-                   else
-                     if ind==1
-                        xprov1=[x(ind_pos(j))];
-                        yprov1=[y(ind_pos(j))];
-                     end
-                  end
-            elseif y(indice_nodo_precedente)>ymax && controllo == 0
-                xprov(end+1)=x(ind_pos(j))+(x(indice_nodo_precedente)-x(ind_pos(j)))...
-                    *(ymax-y(ind_pos(j)))/(y(indice_nodo_precedente)-y(ind_pos(j)));
-                yprov(end+1)=ymax;
-                % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                  % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                  % nodo nuovo e poi quello successivo valido
-                  if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                     xprov(end+1)=x(ind_pos(j));
-                     yprov(end+1)=y(ind_pos(j));
-                     if ind==1
-                            xprov1=[x(ind_pos(j)) xprov(end-1)];
-                            yprov1=[y(ind_pos(j)) yprov(end-1)];
-                      end
-                   else
-                     if ind==1
-                       xprov1=[x(ind_pos(j))];
-                       yprov1=[y(ind_pos(j))];
-                     end
-                  end
-            end
-            controllo=0;
-        else %se il nodo precedente è dentro
-            %non faccio nulla
-        end
-        
-        if nodo_check(indice_nodo_successivo)==0 %se il nodo successivo è fuori
-            % verifico in che parte del dominio è fuori
-            if x(indice_nodo_successivo)<xmin
-                xprov(end+2)=xmin;
-                yprov(end+2)=y(ind_pos(j))+(y(indice_nodo_successivo)-y(ind_pos(j)))...
-                    *(xmin-x(ind_pos(j)))/(x(indice_nodo_successivo)-x(ind_pos(j)));
-                %verifico se il punto della retta interseca il dominio
-                if yprov(end)>=ymin && yprov(end)<=ymax
-                      % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                      % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                      % nodo nuovo e poi quello successivo valido
-                      if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                       xprov(end-1)=x(ind_pos(j));
-                       yprov(end-1)=y(ind_pos(j));
-                       if ind==1
-                           xprov1=[xprov1(1) xprov(end) xprov1(2:end)];
-                           yprov1=[yprov1(1) yprov(end) yprov1(2:end)];
-                       end
-                       if xprov(end-1)==xprov(end-2) && yprov(end-1)==yprov(end-2)
-                         xprov(end-1)=[];
-                         yprov(end-1)=[];
-                       end
-                      else
-                        xprov(end-1)=[];
-                        yprov(end-1)=[];
+                        xprov(end+1)=x(indice_nodo_successivo);
+                        yprov(end+1)=y(indice_nodo_successivo);
                       end     
                     controllo=1;
                 else
-                    xprov(end-1:end)=[];
-                    yprov(end-1:end)=[];
+                    controllo=0;
+                end
+            elseif x(indice_nodo_attuale)>xmax
+                x_retta=xmax;
+                y_retta=y(indice_nodo_attuale)+(y(indice_nodo_successivo)-y(indice_nodo_attuale))...
+                    *(xmax-x(indice_nodo_attuale))/(x(indice_nodo_successivo)-x(indice_nodo_attuale));
+                %verifico se il punto della retta interseca il dominio
+                if y_retta>=ymin && y_retta<=ymax
+                      if x_retta~=x(indice_nodo_successivo) || y_retta~=y(indice_nodo_successivo)
+                         if indice_nodo_attuale==n
+                           xprov(end+1)=x(indice_nodo_successivo);
+                           yprov(end+1)=y(indice_nodo_successivo);
+                           xvert_aux=x_retta;
+                           yvert_aux=y_retta;
+                         else
+                           xprov=[xprov(1:end) x_retta x(indice_nodo_successivo)];
+                           yprov=[yprov(1:end) y_retta y(indice_nodo_successivo)];
+                         end 
+                      else
+                        xprov(end+1)=x(indice_nodo_successivo);
+                        yprov(end+1)=y(indice_nodo_successivo);
+                      end    
+                    controllo=1;
+                else
+                    controllo=0;
+                end
+            end
+            if y(indice_nodo_attuale)<ymin && controllo == 0
+                y_retta=ymin;
+                x_retta=x(indice_nodo_attuale)+(x(indice_nodo_successivo)-x(indice_nodo_attuale))...
+                    *(ymin-y(indice_nodo_attuale))/(y(indice_nodo_successivo)-y(indice_nodo_attuale));
+                  if x_retta~=x(indice_nodo_successivo) || y_retta~=y(indice_nodo_successivo)
+                         if indice_nodo_attuale==n
+                           xprov(end+1)=x(indice_nodo_successivo);
+                           yprov(end+1)=y(indice_nodo_successivo);
+                           xvert_aux=x_retta;
+                           yvert_aux=y_retta;
+                         else
+                           xprov=[xprov(1:end) x_retta x(indice_nodo_successivo)];
+                           yprov=[yprov(1:end) y_retta y(indice_nodo_successivo)];
+                         end 
+                   else
+                        xprov(end+1)=x(indice_nodo_successivo);
+                        yprov(end+1)=y(indice_nodo_successivo);
+                   end
+            elseif y(indice_nodo_attuale)>ymax && controllo == 0
+                y_retta=ymax;
+                x_retta=x(indice_nodo_attuale)+(x(indice_nodo_successivo)-x(indice_nodo_attuale))...
+                    *(ymax-y(indice_nodo_attuale))/(y(indice_nodo_successivo)-y(indice_nodo_attuale));
+                  if x_retta~=x(indice_nodo_successivo) || y_retta~=y(indice_nodo_successivo)
+                         if indice_nodo_attuale==n
+                           xprov(end+1)=x(indice_nodo_successivo);
+                           yprov(end+1)=y(indice_nodo_successivo);
+                           xvert_aux=x_retta;
+                           yvert_aux=y_retta;
+                         else
+                           xprov=[xprov(1:end) x_retta x(indice_nodo_successivo)];
+                           yprov=[yprov(1:end) y_retta y(indice_nodo_successivo)];
+                         end 
+                   else
+                        xprov(end+1)=x(indice_nodo_successivo);
+                        yprov(end+1)=y(indice_nodo_successivo);
+                   end   
+            end     
+        elseif nodo_check(indice_nodo_attuale)==1 && nodo_check(indice_nodo_successivo)==0 
+            % verifico in che parte del dominio è fuori
+            if x(indice_nodo_successivo)<xmin
+                x_retta=xmin;
+                y_retta=y(indice_nodo_attuale)+(y(indice_nodo_successivo)-y(indice_nodo_attuale))...
+                    *(xmin-x(indice_nodo_attuale))/(x(indice_nodo_successivo)-x(indice_nodo_attuale));
+                %verifico se il punto della retta interseca il dominio
+                if y_retta>=ymin && y_retta<=ymax
+                      if x_retta~=x(indice_nodo_attuale) || y_retta~=y(indice_nodo_attuale)
+                       xprov(end+1)=x_retta;
+                       yprov(end+1)=y_retta;
+                      else
+                        
+                      end     
+                    controllo=1;
+                else
                     controllo=0;
                 end
             elseif x(indice_nodo_successivo)>xmax
-                xprov(end+2)=xmax;
-                yprov(end+2)=y(ind_pos(j))+(y(indice_nodo_successivo)-y(ind_pos(j)))...
-                    *(xmax-x(ind_pos(j)))/(x(indice_nodo_successivo)-x(ind_pos(j)));
+                x_retta=xmax;
+                y_retta=y(indice_nodo_attuale)+(y(indice_nodo_successivo)-y(indice_nodo_attuale))...
+                    *(xmax-x(indice_nodo_attuale))/(x(indice_nodo_successivo)-x(indice_nodo_attuale));
                 %verifico se il punto della retta interseca il dominio
-                if yprov(end)>=ymin && yprov(end)<=ymax           
-                      % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                      % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                      % nodo nuovo e poi quello successivo valido
-                      if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                       xprov(end-1)=x(ind_pos(j));
-                       yprov(end-1)=y(ind_pos(j));
-                       if ind==1
-                           xprov1=[xprov1(1) xprov(end) xprov1(2:end)];
-                           yprov1=[yprov1(1) yprov(end) yprov1(2:end)];
-                       end
-                       if xprov(end-1)==xprov(end-2) && yprov(end-1)==yprov(end-2)
-                         xprov(end-1)=[];
-                         yprov(end-1)=[];
-                       end
+                if y_retta>=ymin && y_retta<=ymax
+                      if x_retta~=x(indice_nodo_attuale) || y_retta~=y(indice_nodo_attuale)
+                       xprov(end+1)=x_retta;
+                       yprov(end+1)=y_retta;
                       else
-                        xprov(end-1)=[];
-                        yprov(end-1)=[];
-                      end            
+                        
+                      end     
                     controllo=1;
                 else
-                    xprov(end-1:end)=[];
-                    yprov(end-1:end)=[];
                     controllo=0;
                 end
             end
             if y(indice_nodo_successivo)<ymin && controllo == 0
-                yprov(end+2)=ymin;
-                xprov(end+2)=x(ind_pos(j))+(x(indice_nodo_successivo)-x(ind_pos(j)))...
-                    *(ymin-y(ind_pos(j)))/(y(indice_nodo_successivo)-y(ind_pos(j)));
-                  % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                  % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                  % nodo nuovo e poi quello successivo valido
-                  if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                     xprov(end-1)=x(ind_pos(j));
-                     yprov(end-1)=y(ind_pos(j));
-                     if ind==1
-                           xprov1=[xprov1(1) xprov(end) xprov1(2:end)];
-                           yprov1=[yprov1(1) yprov(end) yprov1(2:end)];
-                     end
-                     if xprov(end-1)==xprov(end-2) && yprov(end-1)==yprov(end-2)
-                      xprov(end-1)=[];
-                      yprov(end-1)=[];
-                     end
+                y_retta=ymin;
+                x_retta=x(indice_nodo_attuale)+(x(indice_nodo_successivo)-x(indice_nodo_attuale))...
+                    *(ymin-y(indice_nodo_attuale))/(y(indice_nodo_successivo)-y(indice_nodo_attuale));
+                  if x_retta~=x(indice_nodo_attuale) || y_retta~=y(indice_nodo_attuale)
+                     xprov(end+1)=x_retta;
+                     yprov(end+1)=y_retta;
                   else
-                     xprov(end-1)=[];
-                     yprov(end-1)=[];
+                     
                   end   
             elseif y(indice_nodo_successivo)>ymax && controllo == 0
-                yprov(end+2)=ymax;
-                xprov(end+2)=x(ind_pos(j))+(x(indice_nodo_successivo)-x(ind_pos(j)))...
-                    *(ymax-y(ind_pos(j)))/(y(indice_nodo_successivo)-y(ind_pos(j)));
-                  % se il nuovo nodo trovato è uguale al nodo dentro allora non
-                  % aggiungo il nodo due volte, altrimenti aggiungo prima il
-                  % nodo nuovo e poi quello successivo valido
-                  if xprov(end)~=x(ind_pos(j)) || yprov(end)~=y(ind_pos(j))
-                     xprov(end-1)=x(ind_pos(j));
-                     yprov(end-1)=y(ind_pos(j));
-                     if ind==1
-                           xprov1=[xprov1(1) xprov(end) xprov1(2:end)];
-                           yprov1=[yprov1(1) yprov(end) yprov1(2:end)];
-                     end
-                     if xprov(end-1)==xprov(end-2) && yprov(end-1)==yprov(end-2)
-                      xprov(end-1)=[];
-                      yprov(end-1)=[];
-                     end
+                y_retta=ymax;
+                x_retta=x(indice_nodo_attuale)+(x(indice_nodo_successivo)-x(indice_nodo_attuale))...
+                    *(ymax-y(indice_nodo_attuale))/(y(indice_nodo_successivo)-y(indice_nodo_attuale));
+                  if x_retta~=x(indice_nodo_attuale) || y_retta~=y(indice_nodo_attuale)
+                     xprov(end+1)=x_retta;
+                     yprov(end+1)=y_retta;
                   else
-                     xprov(end-1)=[];
-                     yprov(end-1)=[];
-                  end    
-            end
-        else %se il nodo successivo è dentro       
-            if ind_pos(j)==1
-              xprov(end+1)=x(ind_pos(j));
-              yprov(end+1)=y(ind_pos(j));  
-            end
-            if indice_nodo_successivo ~= 1
-                xprov(end+1)=x(indice_nodo_successivo);
-                yprov(end+1)=y(indice_nodo_successivo); 
-            end
-        end    
+                    
+                  end   
+            end  
+        elseif nodo_check(indice_nodo_attuale)==1 && nodo_check(indice_nodo_successivo)==1
+            xprov(end+1)=x(indice_nodo_successivo);
+            yprov(end+1)=y(indice_nodo_successivo);
+        end
         controllo=0;
     end
     xprov(1)=[];
     yprov(1)=[];
-    if ind==3 && abs(y(ind_pos(1))-ymax)<1e-10
-        xprov(end)=[];
-        yprov(end)=[];
-    end
 else
     % il poligono ha tutti i nodi dentro
     xprov=x; yprov=y;
 end
-% se ha solo un nodo dentro il dominio
-if ind==1
-    xprov=xprov1;
-    yprov=yprov1;
+% per caso 0-1 ultimo-primo vertice del poligono
+if xvert_aux~=Inf
+    xprov(end+1)=xvert_aux;
+    yprov(end+1)=yvert_aux;
 end
-% caso poligono contenga il punto (xmin,ymin)
-if y(1)>ymin && y(1)-2*r_vertice<ymin && (x(1)==xmin || abs(x(1)-xmin)<1e-15)
-    xprov=[xprov(1) xmin xprov(2:end)];
-    yprov=[yprov(1) ymin yprov(2:end)];
-    
+j=0;
+b=zeros(1,1); %trovo i nodi sul bordo
+for i=1:length(xprov)
+    if abs(xprov(i)-xmin)<=1e-10 || abs(xprov(i)-xmax)<=1e-10 || abs(yprov(i)-ymin)<=1e-10 || abs(yprov(i)-ymax)<=1e-10
+        j=j+1;
+        b(j)=i;
+    end
 end
-% caso poligono contenga il punto (xmax,ymin)
-if y(1)>ymin && y(1)-2*r_vertice<ymin && (x(1)==xmax || abs(x(1)-xmax)<1e-15)
-    xprov(end+1)=xmax;
-    yprov(end+1)=ymin;
-    xprov(1)=[];
-    yprov(1)=[];
+x_centro=mean(x);
+y_centro=mean(y);
+cord_spigoli = [xmin, ymin;
+                xmax, ymin;
+                xmax, ymax;
+                xmin, ymax];
+%trovo la distanza euclidea dal centro del poligono agli spigoli del dominio
+V= vecnorm((cord_spigoli-[x_centro,y_centro])');
+[dist_spigolo,ind_spigolo]=min(V);
+% se ci sono due nodi sul bordo e hanno tutte le coordinate diverse
+if j==2 && ind~=n && dist_spigolo<r_vertice 
+     if ind_spigolo==1
+          xprov=[xprov(1:b(1)) cord_spigoli(ind_spigolo,1) xprov(b(2):end)];
+          yprov=[yprov(1:b(1)) cord_spigoli(ind_spigolo,2) yprov(b(2):end)];
+      elseif ind_spigolo==2
+          xprov=[xprov(1:b(2)) cord_spigoli(ind_spigolo,1) xprov(b(2)+1:end)];
+          yprov=[yprov(1:b(2)) cord_spigoli(ind_spigolo,2) yprov(b(2)+1:end)];
+      elseif ind_spigolo==3
+          xprov=[xprov(1:b(2)) cord_spigoli(ind_spigolo,1) xprov(b(2)+1:end)];
+          yprov=[yprov(1:b(2)) cord_spigoli(ind_spigolo,2) yprov(b(2)+1:end)];
+      elseif ind_spigolo==4
+          xprov=[xprov(1:b(1)) cord_spigoli(ind_spigolo,1) xprov(b(2):end)];
+          yprov=[yprov(1:b(1)) cord_spigoli(ind_spigolo,2) yprov(b(2):end)];
+     end
 end
-% caso poligono contenga il punto (xmax,ymax)
-if y(1)>ymax && y(1)-2*r_vertice<ymax && (x(1)==xmax || abs(x(1)-xmax)<1e-15)
-    xprov(end+1)=xmax;
-    yprov(end+1)=ymax;
-    xprov(end-1)=[];
-    yprov(end-1)=[];
-end
-if y(1)<ymax && y(1)-2*r_vertice>ymin && (x(1)==xmax || abs(x(1)-xmax)<1e-15)
-    xprov(1)=[];
-    yprov(1)=[];
-    xprov(end)=[];
-    yprov(end)=[];
-end
+hold on
+%plot([xprov, xprov(1)],[yprov, yprov(1)],'k','linewidth',1)
+plot([xmin, xmax, xmax, xmin, xmin],[ymin, ymin, ymax, ymax, ymin])
+axis equal
+
 end
