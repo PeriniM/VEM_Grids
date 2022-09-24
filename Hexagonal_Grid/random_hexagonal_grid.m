@@ -32,7 +32,7 @@ elimina_riga=0;
 for i=1:suddy
     for j=1:suddx
       indelem=indelem+1;
-      [xprov, yprov] = creaesagono_v1(x,y,n,suddx,f1,xmin,xmax,ymin,ymax);
+      [xprov, yprov] = createHexagon(x,y,n,suddx,f1,xmin,xmax,ymin,ymax);
       if i==1
         if length(yprov)==4
           yprov(end)= ymax; 
@@ -119,18 +119,19 @@ if elimina_riga==1
     indelem=indelem-suddx;
 end
 
-linee_x=uniquetol(nodi_x); %usa quicksort + ordine crescente
-linee_y=fliplr(uniquetol(nodi_y)); %in ordine decrescente
-nodi_unici=zeros(1,2); %indici dei nodi sulle linee x e y univoche
-count_nodi_unici=zeros(1,1); %numerazione dei nodi per ciascun vertice
-count_nodi_globali=0; %contatore per l'incremento dei nodi globali
+%% NODES ENUMERATION
+linee_x=uniquetol(nodi_x); %quicksort + ascending order
+linee_y=fliplr(uniquetol(nodi_y)); %descending order
+nodi_unici=zeros(1,2); %indices of nodes laying on unique x and y lines
+count_nodi_unici=zeros(1,1); %nodes numeration for each vertex
+count_nodi_globali=0; %counter for global nodes
 xvert=zeros(1,1);
 yvert=zeros(1,1);
 
 for s=1:indelem
     for k=1:length(elem_x{s,:}) 
         count_nodi_globali=count_nodi_globali+1;
-        %trova la posizione del nodo nelle linee univoche con tolleranza
+        %find node's position on unique lines with tolerance
         ind_pos_x=ismembertol(linee_x,elem_x{s,:}(1,k));
         ind_pos_y=ismembertol(linee_y,elem_y{s,:}(1,k));
         if s==1
@@ -139,20 +140,20 @@ for s=1:indelem
             xvert(end+1)= linee_x(ind_pos_x);
             yvert(end+1)= linee_y(ind_pos_y);
         else
-            %se trova una ripetizione degli indici dei nodi
+            %if finds duplicates of nodes' indices
             if find(ismember(nodi_unici,[find(ind_pos_x==1) find(ind_pos_y==1)],'rows'))
-                %trovo l'indice del nodo "originale" non ripetuto
+                %find the index of the non repeated "original" node
                 index = find(ismember(nodi_unici,[find(ind_pos_x==1) find(ind_pos_y==1)],'rows'));
-                %inserisco la numerazione che avevo dato al nodo già esistente
+                %insert the nueration already given to the existing node
                 count_nodi_unici(end+1)=count_nodi_unici(index(1));
-                %aggiorno la cella degli elementi
+                %update the elements cell
                 elem{s,:}(1,k)=count_nodi_unici(end);
-                %decremento il contatore globale
+                % decrease global counter
                 count_nodi_globali=count_nodi_globali-1;
             else
                 count_nodi_unici(end+1)=count_nodi_globali;  
                 elem{s,:}(1,k)=count_nodi_unici(end);
-                % metto solo le coordinate che non si ripetono
+                %insert only non repeated coordinates
                 xvert(end+1)= linee_x(ind_pos_x);
                 yvert(end+1)= linee_y(ind_pos_y);
             end
@@ -160,15 +161,15 @@ for s=1:indelem
         nodi_unici(end+1,:)=[find(ind_pos_x==1) find(ind_pos_y==1)]; 
     end
 end
-%rimuovo il primo valore che si era creato quando li ho inizializzati
+%remove first element for initialization
 xvert(1)=[];
 yvert(1)=[];
-
+%% GRID PLOT
 xvert_rand=xvert;
 yvert_rand=yvert;
 
 for ss=1:30
-% costruzioni nodi di frontiera
+% building boundary nodes
 nnode=length(xvert);
 j=0;
 b=zeros(1,1);
@@ -184,7 +185,7 @@ end
 griglia.dirichlet=b(:);
 griglia.neuman=0;
 
-% disegno gli elementi con i loro nodi
+% draw elements with their nodes
 
 for iel=1:indelem
     xvertici=elem{iel,:};
