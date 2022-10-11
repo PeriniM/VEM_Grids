@@ -25,6 +25,10 @@ List of Matlab scripts that generates polygonal (regular and irregular) grids wi
 ![Slide1](presentation_slides/Slide16.JPG?raw=true "Slide16")
 ![Slide2](presentation_slides/Slide17.JPG?raw=true "Slide17")
 
+## Fast way to create custom grids
+I have created a simple online platform to build custom shape to be arrange into a grid. You can then export the new shapes in a CSV file for further manipulation. In the <i>matlab</i> folder in the following repo you can find a script that takes as input the CSV shape and outputs a NxM grid. </br>
+[createGrid() repo](https://github.com/PeriniM/createGrid)
+
 ## Useful Links
 [Hexagons Explanation](https://www.redblobgames.com/grids/hexagons/) </br>
 [Pentagonal Tilings](https://commons.wikimedia.org/wiki/Category:Pentagonal_tilings) </br>
